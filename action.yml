@@ -1,0 +1,52 @@
+name: Setup noir
+author: Giovanni Barillari <gi0baro@d4net.org>
+description: Installs noir
+branding:
+  icon: package
+  color: blue
+inputs:
+  version:
+    description: "Version to install. (default: latest)"
+    required: false
+    default: latest
+runs:
+  using: composite
+  steps:
+    - name: Install noir
+      run: |
+        set -eou pipefail
+
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          _target_arch=windows-x86_64
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+          _target_arch=darwin-x86_64
+        else
+          _target_arch=linux-x86_64
+        fi
+
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          path="C:/Users/runneradmin/AppData/Roaming/Noir"
+        else
+          path="$HOME/.local/noir"
+        fi
+
+        echo -e "\n\033[33mSetting noir installation path as: $path\033[0m\n"
+        mkdir -p $path
+
+        if [ "${{ inputs.version }}" == "latest" ]; then
+          _release=$(curl -sSL -H 'Authorization: Bearer ${{ github.token }}' https://api.github.com/repos/gi0baro/noir/releases/latest)
+          _version=$(echo "$_release" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        else
+          _version=${{ inputs.version }}
+        fi
+
+        echo -e "\033[33mInstalling noir $_version\033[0m\n"
+        _archive=$(mktemp)
+        curl -sSL https://github.com/gi0baro/noir/releases/download/$_version/noir-$_version-$_target_arch.tar.gz > $_archive
+        tar xzf $_archive --directory $path
+        echo "$path" >> $GITHUB_PATH
+        export PATH="$path:$PATH"
+
+        echo -e "\n\033[33mInstalled noir successfully ✅\033[0m"
+
+      shell: bash
